@@ -1,0 +1,93 @@
+//<<Nhân viên>>
+//Xem thông tin cá nhân
+#Thủ thư
+
+###//Tìm phiếu mượn sách
+POST http://localhost:5000/staff/manage-borrowLogs
+Content-Type: application/json
+
+{
+    "MaDocGia" : "DG002"
+}
+//Duyệt phiếu mượn sách
+//Mượn sách
+//Trả sách
+//<<Quản kho>>
+###//Thêm sách
+POST http://localhost:5000/staff/manage-books/add
+Content-Type: application/json
+
+{
+    "MaSach": "CT223",
+    "TenSach": "Quản lý dự án phần mềm",
+    "DonGia": 20000,
+    "SoQuyen": 10,
+    "NamXuatBan": 2020,
+    "MaNXB": "adc567",
+    "TacGia": "Nguyễn Thị D",
+    "TheLoai": "Giáo Trình"
+  }
+
+###//Cập nhật sách
+PUT http://localhost:5000/staff/manage-books/66cc674d5766472d43afda63
+Content-Type: application/json
+
+{
+    "DonGia": 30000
+}
+//Xóa sách
+###//Tìm sách
+POST http://localhost:5000/staff/manage-books
+Content-Type: application/json
+
+{
+    "keyword":"CT449"
+}
+
+###//Thêm nhà xuất bản
+POST http://localhost:5000/staff/manage-publishers/add
+Content-Type: application/json
+
+{
+    "MaNXB": "NXB003",
+    "TenNXB": "Nhà Xuất Bản C",
+    "DiaChi": "Việt Nam"
+}
+###//Cập nhật nhà xuất bản
+PUT http://localhost:5000/staff/manage-publishers/66cc9b88707a80ef59d8f4b5
+Content-Type: application/json
+
+{
+    "TenNXB": "Nhà Xuất Bản C1"
+}
+###//Xóa nhà xuất bản
+DELETE http://localhost:5000/staff/manage-publishers/66cc9afafb89c3e67fa4b5e8
+//Tìm nhà xuất bản
+###//Xem chi tiết nhà xuất bản
+GET http://localhost:5000/staff/manage-publishers/66cc9afafb89c3e67fa4b5e8
+//<<Quản trị viên>>
+###//Thêm tài khoản
+POST http://localhost:5000/staff/manage-users/add
+Content-Type: application/json
+
+{
+    "MSNV": "NV0002",
+    "HoTenNV": "Nguyễn Văn B",
+    "ChucVu": "Quản Kho",
+    "DiaChi": "Viet Nam",
+    "SoDienThoai": "0702922401",
+    "Password": "12345678"
+}
+
+###//Cập nhật tài khoản
+PUT http://localhost:5000/staff/profile
+Content-Type: application/json
+
+{
+    "HoTenNV": "Nguyễn Văn E"
+}
+###//Xóa 1 tài khoản
+DELETE http://localhost:5000/staff/manage-users/66cc905b2d2d12cc5627246b
+
+###//Xem chi tiết 1 tài khoản
+GET http://localhost:5000/staff/manage-users/66cc905b2d2d12cc5627246b
