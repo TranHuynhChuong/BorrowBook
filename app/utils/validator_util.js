@@ -11,8 +11,6 @@ const passwordValidation = [
     // .withMessage('Password must contain at least one lowercase letter')
     // .matches(/[0-9]/)
     // .withMessage('Password must contain at least one number')
-    // .matches(/[\W_]/)
-    // .withMessage('Password must contain at least one special character')
 ];
 
 module.exports = {

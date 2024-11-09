@@ -19,14 +19,14 @@ passport.use(
 
                 if (!user) {
                     return done(null, false, {
-                        message: 'Email or MSNV not registered',
+                        message:'Tên đăng nhập/Mật khẩu không chính xác!',
                     });
                 }
 
                 // Kiểm tra mật khẩu
                 const isMatch = await user.isValidPassword(password);
                 if (!isMatch) {
-                    return done(null, false, { message: 'Incorrect password' });
+                    return done(null, false, { message:'Tên đăng nhập/Mật khẩu không chính xác!' });
                 }
 
                 // Xác thực thành công
@@ -44,19 +44,16 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (id, done) => {
     try {
-        // Tìm kiếm trong Account
+
         const account = await User.findById(id);
         if (account) {
-            return done(null, { type: 'account', user: account });
+            return done(null, { user: account });
         }
 
-        // Tìm kiếm trong Staff
         const staff = await Staff.findById(id);
         if (staff) {
-            return done(null, { type: 'staff', user: staff });
+            return done(null, { user: staff });
         }
-
-        // Nếu không tìm thấy cả Account và Staff
         return done(new Error('User not found'));
     } catch (err) {
         done(err);

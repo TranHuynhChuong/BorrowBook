@@ -1,27 +1,25 @@
 const mongoose = require('mongoose');
+const AutoIncrement = require('mongoose-sequence')(mongoose);
 
-// Định nghĩa schema cho model NhaXuatBan
 const NhaXuatBanSchema = new mongoose.Schema({
     MaNXB: {
         type: String,
-        required: true, // Mã nhà xuất bản là bắt buộc
-        unique: true, // Đảm bảo mã nhà xuất bản là duy nhất
+        unique: true,
     },
     TenNXB: {
         type: String,
-        required: true, // Tên nhà xuất bản là bắt buộc
+        required: true,
     },
     DiaChi: {
-        type: String, // Địa chỉ không bắt buộc
+        type: String,
+        required: true,
     },
-    SuaDoiLanCuoi: {
-        type: Date,
-    },
-    NguoiThucHien: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'NhanVien',
-    }
-});
 
-// Tạo và xuất model NhaXuatBan từ schema đã định nghĩa
+});
+NhaXuatBanSchema.index({ TenNXB: "text" });
+
+NhaXuatBanSchema.plugin(AutoIncrement, { inc_field: 'publisher_seq', start_seq: 1 });
+
+
 module.exports = mongoose.model('NhaXuatBan', NhaXuatBanSchema);
+

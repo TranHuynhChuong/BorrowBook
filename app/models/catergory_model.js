@@ -2,23 +2,16 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const TheLoaiSchema = new Schema({
-    TenTheLoai: {
+    MaMucSach: {
         type: String,
         required: true,
     },
-    TheLoaiCha: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'TheLoai',
-        default: null,
+    TenMucSach: {
+        type: String,
+        required: true,
     },
-    SuaDoiLanCuoi: {
-        type: Date,
-    },
-    NguoiThucHien: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'NhanVien',
-    }
 });
 
+TheLoaiSchema.index({ TenMucSach: "text" });
 
-module.exports = mongoose.model('TheLoai', TheLoaiSchema);
+module.exports = mongoose.model('DanhMuc', TheLoaiSchema);

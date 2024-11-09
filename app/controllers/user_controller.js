@@ -2,132 +2,200 @@
 const BorrowLog = require('../models/borrowLog_model');
 const User = require('../models/user_model');
 const createHttpError = require('http-errors');
-const Profile = require('../models/user_model');
-const { sendOTPEmail, sendBorrowEmail } = require('../utils/sendMail');
-const OTP = require('../models/otp_model');
+const Book = require('../models/book_model');
+const { getAvatarBucket } = require('../utils/mongodb_util');
+const mongoose = require('mongoose');
+const dayjs = require('dayjs');
 
 exports.RegisterBorrow = async (req, res, next) => {
     try {
-        const { NgayMuon, NgayTra } = req.body;
-        const MaDocGia = req.user.user._id.toString();
-        const MaSach = req.params.id;
-        const borowLog = new BorrowLog({ MaDocGia, MaSach, NgayMuon, NgayTra });
-        const borrowLogSaved = await borowLog.save();
+        const book = await Book.findById(req.body.ID_Sach);
+        if (book) {
+            if (book.SoLuongHienTai <= 0) {
+                return res.json({mesage: "Sách hiện tại không có sẵn"});
+            } else {
+                book.SoLuongHienTai -= 1;
+                await book.save();
+            }
+        } else {
+            return res.status(404);
+        }
 
-        //Gửi mail đăng ký thành công
-        sendBorrowEmail(req.user.user.email).catch((error) => {
-            console.error(`Failed to send borrow email: ${error.message}`);
-        });
-
-        // Trả về phản hồi ngay lập tức
-        res.status(201).json({
-            borrowLogSaved,
-        });
+        const borrowLog = new BorrowLog(req.body);
+        await borrowLog.save();
+        
+        return res.status(201).json({message: "Đăng ký thành công"});
     } catch (error) {
-        next(error);
+        next(createHttpError.InternalServerError('Failed to retrieve borrow logs'));
     }
 };
 
-exports.getAllBorrowLog = async (req, res, next) => {
+exports.getBorrowLog = async (req, res, next) => {
     try {
-        const borowLogs = await BorrowLog.find({});
-        res.json(borowLogs);
+        const { search, status } = req.query;
+        const { id } = req.params; 
+        const borrowLogQuery = {};
+
+        // Kiểm tra xem id có phải là ID phiếu mượn hay ID độc giả
+        if (id) {
+            // Tìm log theo ID phiếu mượn
+            const borrowLog = await BorrowLog.findById(id)
+                .populate({ path: 'ID_DocGia', select: 'MaDocGia' })
+                .populate({ path: 'ID_Sach', select: 'MaSach TenSach' })
+                .populate({ path: 'ID_NV', select: 'MSNV' })
+                .exec();
+
+            // Nếu tìm thấy log theo ID phiếu mượn
+            if (borrowLog) {
+                const responseLog = {
+                    _id: borrowLog._id,
+                    ID_DocGia: borrowLog.ID_DocGia,
+                    ID_Sach: borrowLog.ID_Sach,
+                    NgayMuon: borrowLog.NgayMuon,
+                    NgayTra: borrowLog.NgayTra,
+                    TrangThai: borrowLog.TrangThai,
+                    MaDocGia: borrowLog.ID_DocGia.MaDocGia,
+                    MaSach: borrowLog.ID_Sach.MaSach,
+                    TenSach: borrowLog.ID_Sach.TenSach,
+                    MSNV: borrowLog.ID_NV ? borrowLog.ID_NV.MSNV : null
+                };
+
+                return res.json(responseLog);
+            }
+
+            // Nếu không tìm thấy log phiếu mượn, kiểm tra ID độc giả
+            const user = await User.findById(id);
+            if (user) {
+                // Tìm tất cả các log của độc giả này
+                borrowLogQuery.ID_DocGia = user._id;
+            
+                // Lấy danh sách các log mượn của độc giả
+                const borrowLogs = await BorrowLog.find(borrowLogQuery)
+                    .populate({ path: 'ID_DocGia', select: 'MaDocGia' })
+                    .populate({ path: 'ID_Sach', select: 'MaSach TenSach' })
+                    .populate({ path: 'ID_NV', select: 'MSNV' })
+                    .exec();
+
+                // Chỉnh sửa logs để bao gồm thông tin MaDocGia và TenSach
+                const modifiedLogs = borrowLogs.map(log => ({
+                    _id: log._id,
+                    ID_DocGia: log.ID_DocGia,
+                    ID_Sach: log.ID_Sach,
+                    NgayMuon: log.NgayMuon,
+                    NgayTra: log.NgayTra,
+                    TrangThai: log.TrangThai,
+                    MaDocGia: log.ID_DocGia.MaDocGia,
+                    MaSach: log.ID_Sach.MaSach,
+                    TenSach: log.ID_Sach.TenSach,
+                    MSNV: log.ID_NV ? log.ID_NV.MSNV : null
+                }));
+
+                // Gửi phản hồi cho danh sách logs của độc giả
+                return res.json(modifiedLogs);
+            } else {
+                return res.json([]);
+            }
+        }
+
+        // Tìm kiếm theo mã độc giả nếu có tham số search
+        if (search) {
+            const users = await User.find({ MaDocGia: new RegExp(search, 'i') }).exec();
+            if (users.length) {
+                // Nếu tìm thấy người dùng, lấy ID_DocGia
+                borrowLogQuery.ID_DocGia = { $in: users.map(user => user._id) }; // Sử dụng $in để tìm kiếm nhiều ID_DocGia
+            } else {
+                // Nếu không tìm thấy người dùng, trả về danh sách rỗng
+                return res.json([]);
+            }
+        }
+
+        if (status) {
+            if (status === 'QuaHan') {
+                const sevenDaysAgo = dayjs().subtract(7, 'day').toDate();
+                borrowLogQuery.NgayTra = null;
+                borrowLogQuery.NgayMuon = { $lte: sevenDaysAgo };
+            } else if (status !== 'TatCa') {
+                borrowLogQuery.TrangThai = status;
+            }
+        }
+
+        const borrowLogs = await BorrowLog.find(borrowLogQuery)
+            .populate({ path: 'ID_DocGia', select: 'MaDocGia' })
+            .populate({ path: 'ID_Sach', select: 'MaSach TenSach' })
+            .populate({ path: 'ID_NV', select: 'MSNV' })
+            .exec();
+
+
+        const modifiedLogs = borrowLogs.map(log => ({
+            _id: log._id,
+            ID_DocGia: log.ID_DocGia,
+            ID_Sach: log.ID_Sach,
+            NgayMuon: log.NgayMuon,
+            NgayTra: log.NgayTra,
+            TrangThai: log.TrangThai,
+            MaDocGia: log.ID_DocGia.MaDocGia,
+            MaSach: log.ID_Sach.MaSach,
+            TenSach: log.ID_Sach.TenSach,
+            MSNV: log.ID_NV ? log.ID_NV.MSNV : null
+        }));
+
+        // Gửi phản hồi cho danh sách logs đã chỉnh sửa
+        return res.json(modifiedLogs);
     } catch (error) {
-        next(
-            createHttpError.InternalServerError(
-                'Failed to retrieve publisher members'
-            )
-        );
+        console.log(error)
+        next(createHttpError.InternalServerError('Failed to retrieve borrow logs'));
     }
 };
+
+
+
 
 //profile>>
-//
-// Lấy thông tin hồ sơ người dùng
-exports.profile = async (req, res, next) => {
-    try {
-        const profiles = await Profile.find({ accountId: req.user.user._id });
-        const profile = profiles[0];
-        const { HoLot, Ten, NgaySinh, Phai, DiaChi, SoDienThoai } = profile;
-        res.json({
-            HoLot,
-            Ten,
-            NgaySinh,
-            Phai,
-            DiaChi,
-            SoDienThoai,
-        });
-    } catch (error) {
-        next(
-            createHttpError.InternalServerError(
-                'Failed to retrieve user profile'
-            )
-        );
-    }
-};
-exports.sendOTP = async (req, res, next) => {
-    try {
-        const email = req.user.user.email;
-        const result = await sendOTPEmail(email);
-        if (result.success) {
-            res.json({
-                message: result.message,
-            });
-        } else {
-            res.status(500).json({
-                message: result.message,
-            });
-        }
-    } catch (error) {
-        next(
-            // createHttpError.InternalServerError(
-            //     'Failed to retrieve user account'
-            // )
-            error
-        );
-    }
-};
-
-exports.getAccount = async (req, res, next) => {
-    try {
-        const email = req.user.user.email;
-        const otps = await OTP.find({ email }).sort({
-            expiresAt: -1,
-        });
-        if (otps.length === 0) {
-            res.json({ success: false, mesage: 'OTP đã hết hạn' });
-        }
-        const otp = otps[0];
-        if (otp.otp === req.body.otp) {
-            res.json({ success: true, email });
-        } else {
-            res.json({ success: false, mesage: 'OTP không trùng khớp' });
-        }
-    } catch (error) {
-        next(
-            // createHttpError.InternalServerError(
-            //     'Failed to retrieve user account'
-            // )
-            error
-        );
-    }
-};
 
 // Cập nhật hồ sơ người dùng
 exports.profileUpdate = async (req, res, next) => {
     try {
-        const update = req.body;
-
-        const updatedProfile = await Profile.findOneAndUpdate(
-            { accountId: req.user.user._id },
-            update,
-            { new: true }
-        ).exec();
-
-        if (!updatedProfile) {
-            return next(createHttpError.NotFound('User member not found'));
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return next(createHttpError.InternalServerError());
         }
-        res.json(updatedProfile);
+
+        const { MaDocGia, ...updatedData } = req.body;
+        Object.assign(user, updatedData);
+
+        if (req.file) {
+            const avatarBucket = getAvatarBucket();
+            if (user.avatar) {
+                try {
+                    const fileId = new mongoose.Types.ObjectId(user.avatar);
+                    const fileExists = await avatarBucket.find({ _id: fileId }).toArray();
+                    if (fileExists.length !== 0) {
+                        await avatarBucket.delete(fileId);
+                    }
+                } catch (err) {
+                    next(createHttpError.InternalServerError());
+                }
+            }
+
+            const uploadStream = avatarBucket.openUploadStream(req.file.originalname);
+            uploadStream.end(req.file.buffer); 
+            uploadStream.on('finish', async () => {
+                user.avatar = uploadStream.id; 
+                await user.save();
+                return res.status(201).json({
+                    message: 'Cập nhật thành công'
+                });
+            });
+
+            uploadStream.on('error', (err) => {
+                next(createHttpError.InternalServerError());
+            });
+        } else {
+            await user.save();
+            return res.status(201).json({
+                message: 'Cập nhật thành công', succes: false
+            });
+        }
     } catch (error) {
         next(
             createHttpError.InternalServerError('Failed to update user profile')
@@ -135,28 +203,50 @@ exports.profileUpdate = async (req, res, next) => {
     }
 };
 
-// Cập nhật mật khẩu
-exports.updatePassword = async (req, res, next) => {
+exports.getAvatar = async (req, res, next) => {
     try {
-        const user = req.user.user;
-        const { oldPassword, newPassword } = req.body;
 
-        const isMatch = await user.isValidPassword(oldPassword);
-        if (!isMatch) {
-            return next(
-                createHttpError.Unauthorized('Old password is incorrect')
-            );
+        const fileId = req.params.id;
+
+        if (!mongoose.Types.ObjectId.isValid(fileId)) {
+            return next(createHttpError.InternalServerError());
         }
 
-        user.Password = newPassword;
-        await user.save();
-        res.json({
-            success: true,
-            message: 'Password updated successfully',
+        const avatarBucket = getAvatarBucket();
+
+        const file = await avatarBucket.find({ _id: new mongoose.Types.ObjectId(fileId) }).toArray();
+        if (!file || file.length === 0) {
+            return next(createHttpError(404, 'Không tìm thấy file ảnh'));
+        }
+
+        res.set('Content-Type', file[0].contentType);
+        const downloadStream = avatarBucket.openDownloadStream(new mongoose.Types.ObjectId(fileId));
+
+        downloadStream.on('error', (err) => {
+            return next(createHttpError.InternalServerError());
         });
+
+        downloadStream.pipe(res);
+
     } catch (error) {
-        next(createHttpError.InternalServerError('Failed to update password'));
+        next(createHttpError.InternalServerError());
     }
 };
-//
+
+exports.getUser = async (req, res, next) => {
+    try {
+        const { MaDocGia } = req.query;
+  
+        const user = await User.findOne({ MaDocGia: MaDocGia });
+        if (!user) {
+            return res.status(404).json({
+                message: 'Không tìm thấy người dùng với mã độc giả này'
+            });
+        }
+
+        return res.status(200).json(user._id);
+    } catch (error) {
+        next(createHttpError.InternalServerError('Failed to retrieve user by MaDocGia'));
+    }
+};
 //profile>>

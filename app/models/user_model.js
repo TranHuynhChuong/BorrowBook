@@ -1,11 +1,11 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const createHttpError = require('http-errors');
+const AutoIncrement = require('mongoose-sequence')(mongoose);
 
 const Userchema = new mongoose.Schema({
     MaDocGia: {
         type: String,
-        required: true,
         unique: true,
     },
     HoLot: {
@@ -41,25 +41,20 @@ const Userchema = new mongoose.Schema({
         required: true,
     },
     avatar: {
-        type: String, // Lưu trữ ảnh dưới dạng Base64
-    },
+        type: String,
+        default: null,
+    }
 });
 
-// Middleware trước khi lưu tài liệu vào cơ sở dữ liệu
+Userchema.plugin(AutoIncrement, { inc_field: 'user_seq', start_seq: 1 });
 Userchema.pre('save', async function (next) {
     if (!this.isModified('password')) {
-        // Kiểm tra xem trường mật khẩu có bị thay đổi không
-        return next(); // Nếu không thay đổi, bỏ qua middleware và tiếp tục lưu tài liệu
+        return next();    
+    } else {
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
     }
-
-    try {
-        const salt = await bcrypt.genSalt(10); // Tạo salt với độ phức tạp là 10
-        this.password = await bcrypt.hash(this.password, salt); // Mã hóa mật khẩu với salt
-
-        next();
-    } catch (error) {
-        next(error);
-    }
+    next();
 });
 
 // Phương thức kiểm tra mật khẩu hợp lệ

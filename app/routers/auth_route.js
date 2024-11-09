@@ -3,39 +3,34 @@ const { ensureLoggedOut, ensureLoggedIn } = require('connect-ensure-login');
 const { registerValidator } = require('../utils/validator_util');
 const authController = require('../controllers/auth_controller');
 
-router.get(
-    '/login',
-    ensureLoggedOut({ redirectTo: '/' }),
-    authController.getLogin
-); //Đi tới trang đăng nhập
-
-router.post(
-    '/login',
-    ensureLoggedOut({ redirectTo: '/' }),
-    authController.postLogin
-); //Đăng nhập
-
-router.get(
-    '/register',
-    ensureLoggedOut({ redirectTo: '/' }),
-    authController.getRegister
-); //Đi tới trang đăng ký
-
-router.post(
-    '/register',
-    ensureLoggedOut({ redirectTo: '/' }),
-    registerValidator,
-    authController.postRegister
-); //Đăng ký
-
-router.get(
-    '/logout',
-    ensureLoggedIn({ redirectTo: '/' }),
-    authController.logout
-); // Đăng xuất
-
 router.get('/', (req, res) => {
     res.json({ message: 'auth page' });
 });
+
+
+router.post(
+    '/login',
+    ensureLoggedOut({ redirectTo: '/api/auth' }),
+    authController.login
+);
+
+
+router.post(
+    '/register',
+    ensureLoggedOut({ redirectTo: '/api/auth' }),
+    registerValidator,
+    authController.register
+);
+
+router.get(
+    '/logout',
+    ensureLoggedIn({ redirectTo: '/api/auth' }),
+    authController.logout
+);
+
+router.get('/checkloggedin', authController.checkLoggedin);
+
+
+
 
 module.exports = router;

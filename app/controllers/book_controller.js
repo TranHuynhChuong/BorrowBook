@@ -1,137 +1,234 @@
+/* eslint-disable no-unused-vars */
 const createHttpError = require('http-errors');
-const Book = require('../models/book_model'); // Giả sử bạn đã có mô hình Book
+const Book = require('../models/book_model');
 const Publisher = require('../models/publisher_model');
+const Category = require('../models/catergory_model');
+const { getCoverBucket } = require('../utils/mongodb_util');
+const mongoose = require('mongoose');
 
-// Tạo sách mới
 exports.createBook = async (req, res, next) => {
-    if (!req.body?.MaSach) {
-        return next(createHttpError(400, 'Mã sách không thể để trống'));
-    }
     try {
-        const doesExist = await Book.findOne({ MaSach: req.body.MaSach });
-        if (doesExist) {
-            return next(createHttpError(409, 'Mã sách đã tồn tại'));
-        }
         const book = new Book(req.body);
-        const document = await book.save();
-        return res.status(201).json(document); // Trả về mã trạng thái 201 Created
-    } catch (error) {
-        console.log(error);
-        return next(createHttpError(500, 'Đã xảy ra lỗi khi tạo sách', error));
-    }
-};
+        book.SoLuongHienTai = book.SoLuong;
+        await book.save();
 
-// Tìm sách theo ID
-exports.findOneBook = async (req, res, next) => {
-    try {
-        const document = await Book.findById(req.params.id).exec();
+        const bookSeq = book.book_seq;
+        const MaSach = `B${bookSeq.toString().padStart(4, '0')}`;
+        await Book.findByIdAndUpdate(book._id, { MaSach: MaSach });
+        if (req.file) {
+            const coverBucket = getCoverBucket();
+            const uploadStream = coverBucket.openUploadStream(req.file.originalname);
 
-        if (!document) {
-            return next(createHttpError(404, 'Sách không được tìm thấy'));
-        }
-        return res.json(document);
-    } catch (error) {
-        return next(
-            createHttpError(
-                500,
-                `Lỗi khi truy xuất sách với ID=${req.params.id}`,
-                error
-            )
-        );
-    }
-};
+            uploadStream.end(req.file.buffer);
+            uploadStream.on('finish', async () => {
+                book.BiaSach = uploadStream.id; 
+                await book.save();
+                res.status(201).json({
+                    message: 'Thêm sách thành công',
+                    sucess: true
+                });
+            });
 
-// Tìm sách bằng từ khóa
-exports.findBookByFilter = async (req, res, next) => {
-    try {
-        //const keyword = req.body.keyword; // Từ khóa người dùng nhập vào
-        const keyword = req.query.keyword;
-        if (!keyword) {
-            return next(
-                createHttpError(400, 'Vui lòng nhập từ khóa để tìm kiếm')
-            );
+            uploadStream.on('error', (err) => {
+                next(createHttpError.InternalServerError());
+            });
+        } else {
+            res.status(400).json({ message: 'Thêm sách thất bại', sucess: false });
         }
 
-        // Tìm kiếm nhà xuất bản trước nếu từ khóa có thể khớp với tên nhà xuất bản
-        const nxb = await Publisher.findOne({
-            TenNXB: { $regex: keyword, $options: 'i' },
-        });
-
-        const filter = {
-            $or: [
-                { MaSach: { $regex: keyword, $options: 'i' } },
-                { TenSach: { $regex: keyword, $options: 'i' } },
-                { TacGia: { $regex: keyword, $options: 'i' } },
-                { TheLoai: { $regex: keyword, $options: 'i' } },
-            ],
-        };
-
-        // Nếu tìm thấy nhà xuất bản, thêm mã NXB vào bộ lọc
-        if (nxb) {
-            filter.$or.push({ MaNXB: nxb.MaNXB });
-        }
-
-        // Tìm kiếm sách dựa trên filter
-        const documents = await Book.find(filter).exec();
-
-        if (documents.length === 0) {
-            return next(
-                createHttpError(404, 'Không tìm thấy sách phù hợp với từ khóa')
-            );
-        }
-
-        return res.json(documents);
     } catch (error) {
         next(createHttpError.InternalServerError());
     }
 };
 
+exports.getBookImage = async (req, res, next) => {
+    try {
+
+        const fileId = req.params.id;
+
+        if (!mongoose.Types.ObjectId.isValid(fileId)) {
+            return next(createHttpError.InternalServerError());
+        }
+
+        const coverBucket = getCoverBucket();
+
+        const file = await coverBucket.find({ _id: new mongoose.Types.ObjectId(fileId) }).toArray();
+        if (!file || file.length === 0) {
+            return next(createHttpError(404, 'Không tìm thấy file ảnh'));
+        }
+
+        res.set('Content-Type', file[0].contentType);
+        const downloadStream = coverBucket.openDownloadStream(new mongoose.Types.ObjectId(fileId));
+
+        downloadStream.on('error', (err) => {
+            return next(createHttpError.InternalServerError());
+        });
+
+        downloadStream.pipe(res);
+
+    } catch (error) {
+        next(createHttpError.InternalServerError());
+    }
+};
+
+exports.getBookImageName = async (req, res, next) => {
+    try {
+        const fileId = req.params.id;
+
+        if (!mongoose.Types.ObjectId.isValid(fileId)) {
+            return next(createHttpError(400, 'ID của file không hợp lệ'));
+        }
+
+        const coverBucket = getCoverBucket();
+
+        const file = await coverBucket.find({ _id: new mongoose.Types.ObjectId(fileId) }).toArray();
+        if (!file || file.length === 0) {
+            return next(createHttpError.InternalServerError());
+        }
+         
+        res.json(file[0].filename);
+
+    } catch (error) {
+        next(createHttpError.InternalServerError());
+    }
+};
+
+
+exports.findBook = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const keyword = req.query.search;
+
+        console.log("ID:", id);
+        console.log("Keyword:", keyword);
+        
+        if (id) {
+            const book = await Book.findById(id)
+                .populate('NXB', 'TenNXB')
+                .populate('TheLoai', 'TenMucSach')
+                .exec();
+            if (!book) {
+                return res.json([]);
+            }
+            return res.json(book);
+        }
+
+        if (keyword) {
+            const textResults = await Book.find({ $text: { $search: `^${keyword}$` } })
+                .populate('NXB', 'TenNXB')
+                .populate('TheLoai', 'TenMucSach')
+                .exec();
+            const regexResults = await Book.find({ MaSach: { $regex: keyword, $options: 'i' } })
+                .populate('NXB', 'TenNXB')
+                .populate('TheLoai', 'TenMucSach')
+                .exec();
+
+            const combinedResults = [...textResults, ...regexResults];
+            const uniqueResults = Array.from(new Set(combinedResults.map(book => book._id))).map(id => {
+                return combinedResults.find(book => book._id.equals(id));
+            });
+
+            if (uniqueResults.length === 0) {
+                return res.json([]);
+            }
+            return res.json(uniqueResults);
+        }
+
+        const books = await Book.find({})
+            .populate('NXB', 'TenNXB')
+            .populate('TheLoai', 'TenMucSach')
+            .exec();
+        return res.json(books);
+    } catch (error) {
+        next(createHttpError.InternalServerError());
+    }
+};
+
+exports.findBookByCategory = async (req, res, next) => {
+    try {
+        const { id } = req.params;  
+        const category = await Category.findById(id);
+        const categoryName = category.TenMucSach;
+        const books = await Book.find({ TheLoai: id });
+
+        return res.json({books: books, categoryName: categoryName});
+
+    } catch (error) {
+        next(createHttpError.InternalServerError());
+    }
+};
+
+
 // Cập nhật thông tin sách
 exports.updateBook = async (req, res, next) => {
-    if (Object.keys(req.body).length === 0) {
-        return next(
-            createHttpError(400, 'Dữ liệu cập nhật không thể để trống')
-        );
-    }
     try {
-        const document = await Book.findByIdAndUpdate(req.params.id, req.body, {
-            new: true,
-        }).exec();
-
-        if (!document) {
-            return next(createHttpError(404, 'Sách không được tìm thấy'));
+        const book = await Book.findById(req.params.id);
+        if (!book) {
+            return next(createHttpError.InternalServerError());
         }
-        return res.json({
-            message: 'Sách đã được cập nhật thành công',
-            document,
-        });
+
+        Object.assign(book, req.body);
+
+        if (req.file) {
+            const coverBucket = getCoverBucket();
+            if (book.BiaSach) {
+                try {
+                    const fileId = new mongoose.Types.ObjectId(book.BiaSach);
+                    const fileExists = await coverBucket.find({ _id: fileId }).toArray();
+                    if (fileExists.length !== 0) {
+                        await coverBucket.delete(fileId);
+                    }
+                } catch (err) {
+                    next(createHttpError.InternalServerError());
+                }
+            }
+
+            const uploadStream = coverBucket.openUploadStream(req.file.originalname);
+            uploadStream.end(req.file.buffer); 
+            uploadStream.on('finish', async () => {
+                book.BiaSach = uploadStream.id; 
+                await book.save();
+                return res.status(201).json({
+                    message: 'Cập nhật thành công'
+                });
+            });
+
+            uploadStream.on('error', (err) => {
+                next(createHttpError.InternalServerError());
+            });
+        } else {
+            await book.save();
+            return res.status(201).json({
+                message: 'Cập nhật thành công', succes: false
+            });
+        }
+
     } catch (error) {
-        return next(
-            createHttpError(
-                500,
-                `Không thể cập nhật sách với ID=${req.params.id}`,
-                error
-            )
-        );
+        createHttpError.InternalServerError()
     }
 };
 
 // Xóa sách theo ID
 exports.deleteBook = async (req, res, next) => {
     try {
-        const document = await Book.findByIdAndDelete(req.params.id).exec();
+        const book = await Book.findById(req.params.id);
 
-        if (!document) {
-            return next(createHttpError(404, 'Sách không được tìm thấy'));
+        if (!book) {
+            next(createHttpError.InternalServerError());
         }
-        return res.json({ message: 'Sách đã được xóa thành công' });
+        const coverBucket = getCoverBucket();
+        const fileId = new mongoose.Types.ObjectId(book.BiaSach);
+        const fileExists = await coverBucket.find({ _id: fileId }).toArray();
+        if (fileExists.length > 0) {
+            await coverBucket.delete(fileId);
+        }
+
+        await Book.findByIdAndDelete(req.params.id).exec();
+
+        return res.json({ message: 'Sách đã được xóa thành công', succes: false });
     } catch (error) {
         return next(
-            createHttpError(
-                500,
-                `Không thể xóa sách với ID=${req.params.id}`,
-                error
-            )
+            createHttpError.InternalServerError()
         );
     }
 };
@@ -139,13 +236,13 @@ exports.deleteBook = async (req, res, next) => {
 // Xóa tất cả sách
 exports.deleteAllBook = async (req, res, next) => {
     try {
-        const result = await Book.deleteMany({}).exec(); // Xóa tất cả sách
+        const result = await Book.deleteMany({}).exec(); 
         return res.json({
-            message: `${result.deletedCount} sách đã được xóa thành công`,
+            message: `${result.deletedCount} sách đã được xóa thành công`, sucess: true
         });
     } catch (error) {
         return next(
-            createHttpError(500, 'Đã xảy ra lỗi khi xóa tất cả sách', error)
+            createHttpError.InternalServerError()
         );
     }
 };
