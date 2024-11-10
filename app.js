@@ -44,7 +44,7 @@ app.use(passport.session());
 require('./app/utils/passportAuth_util');
 
 //Cấu hình Routes
-app.use(express.static(path.join(__dirname, './dist')));
+app.use(express.static(path.join(__dirname, './frontend/dist')));
 
 app.use('/api/auth', require('./app/routers/auth_route'));
 app.use('/api/book', require('./app/routers/book_route'));
@@ -54,7 +54,7 @@ app.use('/api/user', ensureLoggedIn({ redirectTo: '/api/user' }), require('./app
 
 // Route để phục vụ trang index.html cho tất cả các yêu cầu khác
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, './dist', 'index.html'));
+  res.sendFile(path.join(__dirname, './frontend/dist', 'index.html'));
 });
 
 
