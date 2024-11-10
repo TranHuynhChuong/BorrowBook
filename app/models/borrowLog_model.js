@@ -1,16 +1,16 @@
 const mongoose = require('mongoose');
 
-// Định nghĩa schema cho model TheoDoiMuonSach
+
 const BorrowLogSchema = new mongoose.Schema({
     ID_DocGia: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'DocGia', // Tham chiếu đến model DocGia
-        required: true, // Mã độc giả là bắt buộc
+        ref: 'DocGia',
+        required: true,
     },
     ID_Sach: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Sach', // Tham chiếu đến model Book (hoặc tên khác của schema sách)
-        required: true, // Mã sách là bắt buộc
+        ref: 'Sach', 
+        required: true, 
     },
     ID_NV: {
         type: mongoose.Schema.Types.ObjectId,
@@ -18,7 +18,7 @@ const BorrowLogSchema = new mongoose.Schema({
     },
     NgayMuon: {
         type: Date,
-        required: true, // Ngày mượn sách là bắt buộc
+        required: true,
     },
     NgayTra: {
         type: Date,
@@ -36,5 +36,4 @@ BorrowLogSchema.index(
     { unique: true }
 );
 
-// Tạo và xuất model TheoDoiMuonSach từ schema đã định nghĩa
 module.exports = mongoose.model('TheoDoiMuonSach', BorrowLogSchema);

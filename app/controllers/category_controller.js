@@ -23,8 +23,8 @@ exports.createCategory = async (req, res, next) => {
 // Tìm mục bằng từ khóa
 exports.findCategory = async (req, res, next) => {
     try {
-        const { id } = req.params; // Lấy id từ params
-        const keyword = req.query.search; // Lấy từ khóa tìm kiếm từ query
+        const { id } = req.params; 
+        const keyword = req.query.search; 
 
         // Nếu có ID, tìm kiếm theo ID
         if (id) {
@@ -32,7 +32,7 @@ exports.findCategory = async (req, res, next) => {
             if (!category) {
                 return next(createHttpError.NotFound('Mục sách không tồn tại'));
             }
-            return res.json(category); // Trả về danh mục nếu tìm thấy
+            return res.json(category); 
         }
 
         // Nếu không có ID, tìm kiếm theo từ khóa
@@ -43,13 +43,13 @@ exports.findCategory = async (req, res, next) => {
             if (documents.length === 0) {
                 return next(createHttpError.NotFound('Không tìm thấy mục sách phù hợp với từ khóa'));
             }
-            return res.json(documents); // Trả về danh sách danh mục tìm thấy
+            return res.json(documents); 
         }
         const categories = await Category.find({}).exec();
         return res.json(categories);
         
     } catch (error) {
-        next(createHttpError.InternalServerError('Tìm kiếm thất bại!')); // Xử lý lỗi
+        next(createHttpError.InternalServerError('Tìm kiếm thất bại!')); 
     }
 };
 

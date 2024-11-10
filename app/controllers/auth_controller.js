@@ -69,7 +69,6 @@ exports.logout = async (req, res, next) => {
                 if (err) return next(createError.InternalServerError());
                 // Xóa cookie liên kết với session
                 res.clearCookie('connect.sid');
-                // Trả về phản hồi thành công sau khi xóa session
                 res.status(200).json({ success: true });
             });
         });

@@ -62,7 +62,7 @@ Userchema.methods.isValidPassword = async function (password) {
     try {
         return await bcrypt.compare(password, this.password);
     } catch (error) {
-        console.error('Error comparing password:', error); // Ghi log lỗi chi tiết
+        console.error('Error comparing password:', error); 
         throw createHttpError.InternalServerError();
     }
 };

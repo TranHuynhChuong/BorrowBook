@@ -9,6 +9,7 @@ const passport = require('passport');
 const MongoStore = require('connect-mongo');
 const { ensureLoggedIn } = require('connect-ensure-login');
 const config = require('./app/config');
+const path = require('path');
 
 require('dotenv').config();
 const app = express();
@@ -43,7 +44,7 @@ app.use(passport.session());
 require('./app/utils/passportAuth_util');
 
 //Cấu hình Routes
-
+app.use(express.static(path.join(__dirname, './dist')));
 
 app.use('/api/auth', require('./app/routers/auth_route'));
 app.use('/api/book', require('./app/routers/book_route'));
@@ -51,7 +52,10 @@ app.use('/api/category', require('./app/routers/category_route'));
 app.use('/api/manage', ensureLoggedIn({ redirectTo: '/api/auth' }), require('./app/routers/manage_route'));
 app.use('/api/user', ensureLoggedIn({ redirectTo: '/api/user' }), require('./app/routers/user_route'));
 
-//app.use('/api/profile', require('./app/routers/profile_route'));
+// Route để phục vụ trang index.html cho tất cả các yêu cầu khác
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, './dist', 'index.html'));
+});
 
 
 //404 Handler

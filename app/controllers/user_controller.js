@@ -76,7 +76,7 @@ exports.getBorrowLog = async (req, res, next) => {
                     .populate({ path: 'ID_NV', select: 'MSNV' })
                     .exec();
 
-                // Chỉnh sửa logs để bao gồm thông tin MaDocGia và TenSach
+
                 const modifiedLogs = borrowLogs.map(log => ({
                     _id: log._id,
                     ID_DocGia: log.ID_DocGia,
@@ -90,7 +90,7 @@ exports.getBorrowLog = async (req, res, next) => {
                     MSNV: log.ID_NV ? log.ID_NV.MSNV : null
                 }));
 
-                // Gửi phản hồi cho danh sách logs của độc giả
+
                 return res.json(modifiedLogs);
             } else {
                 return res.json([]);
@@ -104,7 +104,7 @@ exports.getBorrowLog = async (req, res, next) => {
                 // Nếu tìm thấy người dùng, lấy ID_DocGia
                 borrowLogQuery.ID_DocGia = { $in: users.map(user => user._id) }; // Sử dụng $in để tìm kiếm nhiều ID_DocGia
             } else {
-                // Nếu không tìm thấy người dùng, trả về danh sách rỗng
+
                 return res.json([]);
             }
         }
@@ -139,7 +139,7 @@ exports.getBorrowLog = async (req, res, next) => {
             MSNV: log.ID_NV ? log.ID_NV.MSNV : null
         }));
 
-        // Gửi phản hồi cho danh sách logs đã chỉnh sửa
+
         return res.json(modifiedLogs);
     } catch (error) {
         console.log(error)

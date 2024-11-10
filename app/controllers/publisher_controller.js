@@ -27,8 +27,8 @@ exports.createPublisher = async (req, res, next) => {
 // Tìm Publisher 
 exports.findPublisher = async (req, res, next) => {
     try {
-        const { id } = req.params; // Lấy id từ params
-        const keyword = req.query.search; // Lấy từ khóa tìm kiếm từ query
+        const { id } = req.params; 
+        const keyword = req.query.search; 
 
         // Nếu có ID, tìm kiếm theo ID
         if (id) {
@@ -36,7 +36,7 @@ exports.findPublisher = async (req, res, next) => {
             if (!publisher) {
                 return next(createHttpError.NotFound('Nhà xuất bản không tồn tại'));
             }
-            return res.json(publisher); // Trả về danh mục nếu tìm thấy
+            return res.json(publisher); 
         }
 
         // Nếu không có ID, tìm kiếm theo từ khóa
@@ -47,13 +47,13 @@ exports.findPublisher = async (req, res, next) => {
             if (documents.length === 0) {
                 return next(createHttpError.NotFound('Không tìm thấy mục sách phù hợp với từ khóa'));
             }
-            return res.json(documents); // Trả về danh sách danh mục tìm thấy
+            return res.json(documents); 
         }
 
         const categories = await Publisher.find({}).exec();
         return res.json(categories);
     } catch (error) {
-        next(createHttpError.InternalServerError('Tìm kiếm thất bại!')); // Xử lý lỗi
+        next(createHttpError.InternalServerError('Tìm kiếm thất bại!')); 
     }
 };
 

@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const BookController = require('../controllers/book_controller');
-const upload = require('../utils/multerConfig'); // Import cấu hình multer
+const upload = require('../utils/multerConfig'); 
 
 
 
@@ -11,7 +11,7 @@ router.post('/book/add', upload.single('file'), BookController.createBook);
 
 const CategoryController = require('../controllers/category_controller');
 
-// Quản lý danh mục *
+
 
 router.put('/category/:id', CategoryController.updateCategory);
 router.delete('/category/:id', CategoryController.deleteCategory);
@@ -19,7 +19,7 @@ router.post('/category/add', CategoryController.createCategory);
 
 
 const PublisherController = require('../controllers/publisher_controller');
-// Quản lý nhà xuất bản
+
 router.get('/publisher/:id?', PublisherController.findPublisher);
 router.put('/publisher/:id', PublisherController.updatePublisher);
 router.delete('/publisher/:id', PublisherController.deletePublisher);

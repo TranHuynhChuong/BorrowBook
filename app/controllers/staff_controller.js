@@ -13,10 +13,10 @@ exports.createUser = async (req, res, next) => {
         const MSNV = `S${newStaffSeq.toString().padStart(4, '0')}`;
         await Staff.findByIdAndUpdate(newStaffSeq._id, { MSNV: MSNV });
 
-        res.status(201).json({ message: 'Staff created successfully', staff: newStaff });
+        res.status(201).json({ message: 'Thêm mới thành công', staff: newStaff });
     } catch (error) {
         console.log(error);
-        next(createHttpError.InternalServerError('Failed to create staff member'));
+        next(createHttpError.InternalServerError('Thêm mới thất bại'));
     }
 };
 
@@ -59,12 +59,12 @@ exports.deleteUser = async (req, res, next) => {
         }
         const document = await Staff.findByIdAndDelete(req.params.id).exec();
         if (!document) {
-            return next(createHttpError.NotFound('Staff member not found'));
+            return next(createHttpError.NotFound('Không tìm thấy nhân viên'));
         }
-        res.json({ message: 'Staff member successfully deleted' });
+        res.json({ message: 'Xóa thành công' });
     } catch (error) {
         next(
-            createHttpError.InternalServerError('Failed to delete staff member')
+            createHttpError.InternalServerError('Xóa không thành công')
         );
     }
 };
@@ -76,10 +76,10 @@ exports.updateUser = async (req, res, next) => {
         Object.assign(staff, req.body);
         await staff.save();
 
-        res.json({ message: 'Staff member successfully updated' });
+        res.json({ message: 'Cập nhật thành công' });
     } catch (error) {
         next(
-            createHttpError.InternalServerError('Failed to update staff member')
+            createHttpError.InternalServerError('Cập nhật thất bại')
         );
     }
 };
@@ -91,7 +91,7 @@ exports.profile = async (req, res, next) => {
     } catch (error) {
         next(
             createHttpError.InternalServerError(
-                'Failed to retrieve user profile'
+                'Cập nhật thất bại'
             )
         );
     }
@@ -107,12 +107,12 @@ exports.profileUpdate = async (req, res, next) => {
             { new: true }
         ).exec();
         if (!updatedStaff) {
-            return next(createHttpError.NotFound('Staff member not found'));
+            return next(createHttpError.NotFound('Không tìm thấy nhân viên'));
         }
         res.json(updatedStaff);
     } catch (error) {
         next(
-            createHttpError.InternalServerError('Failed to update user profile')
+            createHttpError.InternalServerError('Cập nhật thất bại')
         );
     }
 };
@@ -120,8 +120,8 @@ exports.profileUpdate = async (req, res, next) => {
 
 exports.updateBorrowLog = async (req, res, next) => {
     try {
-        const { id } = req.params; // ID của phiếu mượn
-        const { TrangThai, NgayTra } = req.body; // Trạng thái mới từ yêu cầu
+        const { id } = req.params;
+        const { TrangThai, NgayTra } = req.body; 
 
         // Tìm phiếu mượn theo ID
         const borrowLog = await BorrowLog.findById(id);
@@ -135,8 +135,8 @@ exports.updateBorrowLog = async (req, res, next) => {
             // Tìm sách tương ứng
             const book = await Book.findById(borrowLog.ID_Sach);
             if (book) {
-                book.SoLuongHienTai += 1; // Tăng số lượng hiện tại lên 1
-                await book.save(); // Lưu thay đổi vào cơ sở dữ liệu
+                book.SoLuongHienTai += 1;
+                await book.save(); 
             } else {
                 return res.status(404).json({ message: "Không tìm thấy sách tương ứng" });
             }
@@ -145,9 +145,9 @@ exports.updateBorrowLog = async (req, res, next) => {
         // Cập nhật trạng thái phiếu mượn
         borrowLog.TrangThai = TrangThai;
         borrowLog.NgayTra = NgayTra;
-        await borrowLog.save(); // Lưu thay đổi vào phiếu mượn
+        await borrowLog.save(); 
 
-        // Gửi phản hồi về phiếu mượn đã được cập nhật
+
         return res.json({
             _id: borrowLog._id,
             ID_DocGia: borrowLog.ID_DocGia,
@@ -163,7 +163,7 @@ exports.updateBorrowLog = async (req, res, next) => {
 
 exports.deleteBorrowLog = async (req, res, next) => {
     try {
-        const { id } = req.params; // ID của phiếu mượn
+        const { id } = req.params;
 
         // Tìm phiếu mượn theo ID
         const borrowLog = await BorrowLog.findById(id);
@@ -186,7 +186,6 @@ exports.deleteBorrowLog = async (req, res, next) => {
         // Xóa phiếu mượn
         await BorrowLog.findByIdAndDelete(id);
 
-        // Gửi phản hồi xác nhận đã xóa
         return res.json({ message: "Phiếu mượn đã được xóa thành công" });
     } catch (error) {
         next(createHttpError.InternalServerError('Failed to delete borrow log'));

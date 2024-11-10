@@ -1,4 +1,4 @@
-const mongoose = require('mongoose'); // Import thư viện mongoose để làm việc với MongoDB
+const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const createHttpError = require('http-errors');
 const AutoIncrement = require('mongoose-sequence')(mongoose);
