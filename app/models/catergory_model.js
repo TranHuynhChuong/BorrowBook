@@ -5,6 +5,7 @@ const TheLoaiSchema = new Schema({
     MaMucSach: {
         type: String,
         required: true,
+        unique: true,
     },
     TenMucSach: {
         type: String,

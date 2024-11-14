@@ -9,7 +9,9 @@ const dayjs = require('dayjs');
 
 exports.RegisterBorrow = async (req, res, next) => {
     try {
-        const book = await Book.findById(req.body.ID_Sach);
+
+        const { ID_DocGia, ID_Sach, NgayMuon } = req.body;
+        const book = await Book.findById(ID_Sach);
         if (book) {
             if (book.SoLuongHienTai <= 0) {
                 return res.json({mesage: "Sách hiện tại không có sẵn"});
@@ -21,11 +23,22 @@ exports.RegisterBorrow = async (req, res, next) => {
             return res.status(404);
         }
 
+        const existingBorrowLog = await BorrowLog.findOne({
+            ID_DocGia,
+            ID_Sach,
+            NgayMuon: new Date(NgayMuon).setHours(0, 0, 0, 0)
+        });
+
+        if (existingBorrowLog) {
+            return res.status(400).json({ message: "Sách đã được đăng ký mượn" });
+        }
+
         const borrowLog = new BorrowLog(req.body);
         await borrowLog.save();
         
         return res.status(201).json({message: "Đăng ký thành công"});
     } catch (error) {
+        console.log(error);
         next(createHttpError.InternalServerError('Failed to retrieve borrow logs'));
     }
 };

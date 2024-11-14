@@ -4,7 +4,12 @@ const createHttpError = require('http-errors');
 
 exports.createCategory = async (req, res, next) => {
     try {
-    
+        const isExit = await Category.find({ MaMucSach: { $regex: req.body.MaMucSach, $options: 'i' } } ).exec();
+        if (isExit) {
+            res.status(400).json({
+                message: 'Mục sách đã tồn tại'
+            });
+        }
         const category = new Category(req.body);
         await category.save();
         res.status(201).json({
@@ -77,6 +82,12 @@ exports.deleteCategory = async (req, res, next) => {
 // Cập nhật thông tin Category
 exports.updateCategory = async (req, res, next) => {
     try {
+        const isExit = Category.find({ MaMucSach: req.body.MaMucSach });
+        if (isExit) {
+            res.status(400).json({
+                message: 'Mục sách đã tồn tại'
+            });
+        }
         const document = await Category.findByIdAndUpdate(
             req.params.id,
             req.body,
