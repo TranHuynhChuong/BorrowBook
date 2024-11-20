@@ -54,7 +54,7 @@ passport.deserializeUser(async (id, done) => {
         if (staff) {
             return done(null, { user: staff });
         }
-        return done(new Error('User not found'));
+        return done(new Error('Tên đăng nhập/Mật khẩu không chính xác!'));
     } catch (err) {
         done(err);
     }

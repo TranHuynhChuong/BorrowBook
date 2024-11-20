@@ -21,12 +21,12 @@ exports.checkLoggedin = async (req, res, next) => {
 
 exports.login = (req, res, next) => {
     passport.authenticate('local', (err, user, info) => {
-        if (err)  return next(createError.NotFound({success: false,message:'Tên đăng nhập/Mật khẩu không chính xác!'}));
+        if (err)  return next(createError.NotFound({success: false , message:'Tên đăng nhập/Mật khẩu không chính xác!'}));
         if (!user) {
-            return next(createError.NotFound({success: false,message:'Tên đăng nhập/Mật khẩu không chính xác!'}));
+            return next(createError.NotFound({success: false , message:'Tên đăng nhập/Mật khẩu không chính xác!'}));
         }
         req.login(user, (err) => {
-            if (err)  return next(createError.NotFound({success: false, message:'Tên đăng nhập/Mật khẩu không chính xác!'}));
+            if (err)  return next(createError.NotFound({success: false , message:'Tên đăng nhập/Mật khẩu không chính xác!'}));
             res.status(200).json({ success: true, user: user });
         });
     })(req, res, next);

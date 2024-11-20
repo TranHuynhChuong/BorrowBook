@@ -16,11 +16,5 @@ module.exports = {
             .normalizeEmail()
             .toLowerCase(),
         ...passwordValidation,
-        body('password2').custom((value, { req }) => {
-            if (value !== req.body.password) {
-                throw new Error('Passwords do not match');
-            }
-            return true;
-        }),
     ],
 };

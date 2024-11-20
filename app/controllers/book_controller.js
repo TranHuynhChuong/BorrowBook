@@ -98,9 +98,6 @@ exports.findBook = async (req, res, next) => {
     try {
         const { id } = req.params;
         const keyword = req.query.search;
-
-        console.log("ID:", id);
-        console.log("Keyword:", keyword);
         
         if (id) {
             const book = await Book.findById(id)
