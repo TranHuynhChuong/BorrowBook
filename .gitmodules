@@ -1,0 +1,3 @@
+[submodule "frontend/BorrowBook_FE"]
+	path = frontend/BorrowBook_FE
+	url = https://github.com/TranHuynhChuong/BorrowBook_FE.git
